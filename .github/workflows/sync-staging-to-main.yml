@@ -31,25 +31,14 @@ jobs:
             echo "should_sync=true" >> $GITHUB_OUTPUT
           else
             echo "should_sync=false" >> $GITHUB_OUTPUT
+            echo "⏹️ Skipping sync — latest commit is not ci/chore/test."
           fi
 
-      - name: Stop if not a ci/chore/test commit
-        if: steps.check.outputs.should_sync == 'false'
-        run: |
-          echo "⏹️ Skipping sync — latest commit is not ci/chore/test."
-          exit 0
-
-      - name: Configure Git
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-
-      - name: Add staging remote
+      - name: Fast-forward main to staging if a ci/chore/test commit
+        if: steps.check.outputs.should_sync == 'true'
         run: |
           git remote add staging-origin https://github.com/${{ github.repository }}.git
           git fetch staging-origin staging
-
-      - name: Fast-forward main to staging
-        run: |
+          
           git merge --ff-only staging-origin/staging
           git push https://x-access-token:${{ secrets.PAT_TOKEN }}@github.com/${{ github.repository }}.git main

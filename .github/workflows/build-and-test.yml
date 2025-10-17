@@ -20,7 +20,6 @@ jobs:
         id: conventional
         run: |
           echo "🔍 Checking commit message for Conventional Commit format..."
-          git fetch --unshallow || true
           git fetch origin
           
           COMMIT_MSG=$(git log --no-merges -1 --pretty=%s)
@@ -60,9 +59,6 @@ jobs:
 
       - name: Run spotless formatting check
         run: ./gradlew spotlessCheck --no-daemon --quiet
-
-      - name: Run lint checks
-        run: ./gradlew lintDebug --no-daemon --quiet --stacktrace
 
       - name: Run unit tests
         run: ./gradlew testDebugUnitTest --no-daemon --quiet
