@@ -1,0 +1,55 @@
+name: Auto Sync Staging → Main on Chore/CI/Test Commits
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [staging]
+
+jobs:
+  sync:
+    name: Sync staging to main
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          token: ${{ secrets.PAT_TOKEN }}
+          fetch-depth: 0
+
+      - name: Get latest commit message
+        id: commit
+        run: |
+          COMMIT_MSG=$(git log -1 --pretty=%B)
+          echo "msg<<EOF" >> $GITHUB_OUTPUT
+          echo "$COMMIT_MSG" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
+      - name: Check if commit is ci/chore/test
+        id: check
+        run: |
+          if [[ "${{ steps.commit.outputs.msg }}" =~ ^(ci|chore|test)(\(.+\))?:\  ]]; then
+            echo "should_sync=true" >> $GITHUB_OUTPUT
+          else
+            echo "should_sync=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Stop if not a ci/chore/test commit
+        if: steps.check.outputs.should_sync == 'false'
+        run: |
+          echo "⏹️ Skipping sync — latest commit is not ci/chore/test."
+          exit 0
+
+      - name: Configure Git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Add staging remote
+        run: |
+          git remote add staging-origin https://github.com/${{ github.repository }}.git
+          git fetch staging-origin staging
+
+      - name: Fast-forward main to staging
+        run: |
+          git merge --ff-only staging-origin/staging
+          git push https://x-access-token:${{ secrets.PAT_TOKEN }}@github.com/${{ github.repository }}.git main
