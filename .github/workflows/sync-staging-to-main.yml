@@ -16,10 +16,12 @@ jobs:
           token: ${{ secrets.PAT_TOKEN }}
           fetch-depth: 0
 
-      - name: Get latest commit message
+      - name: Get latest commit message from staging
         id: commit
         run: |
-          COMMIT_MSG=$(git log -1 --pretty=%B)
+          git fetch origin staging
+          
+          COMMIT_MSG=$(git log origin/staging -1 --pretty=%B)
           echo "msg<<EOF" >> $GITHUB_OUTPUT
           echo "$COMMIT_MSG" >> $GITHUB_OUTPUT
           echo "EOF" >> $GITHUB_OUTPUT
@@ -37,8 +39,5 @@ jobs:
       - name: Fast-forward main to staging if a ci/chore/test commit
         if: steps.check.outputs.should_sync == 'true'
         run: |
-          git remote add staging-origin https://github.com/${{ github.repository }}.git
-          git fetch staging-origin staging
-          
-          git merge --ff-only staging-origin/staging
+          git merge --ff-only origin/staging
           git push https://x-access-token:${{ secrets.PAT_TOKEN }}@github.com/${{ github.repository }}.git main
